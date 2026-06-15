@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ImageUploader } from '@/features/ai-recognition/components/ImageUploader'
 import { AIResultPreview } from '@/features/ai-recognition/components/AIResultPreview'
@@ -12,11 +12,11 @@ import { createRecord } from '@/services/recordService'
 import { linkImageToMeal } from '@/services/imageService'
 import { MEAL_TYPE_LABELS, type MealType } from '@/types/food'
 import { MEAL_TYPES } from '@/lib/constants'
-import { getUserMessage } from '@/lib/error-messages'
+import { getUserMessage, isRetryable } from '@/lib/error-messages'
 
 export default function AIRecordPage() {
   const navigate = useNavigate()
-  const { result, imagePath, setResult, clearResult } = useAIResultStore()
+  const { result, setResult, clearResult } = useAIResultStore()
   const [analyzing, setAnalyzing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -24,6 +24,8 @@ export default function AIRecordPage() {
   const [selectedMealType, setSelectedMealType] = useState<MealType>('lunch')
   const [uploadedImageId, setUploadedImageId] = useState<string | null>(null)
   const [uploadedImagePath, setUploadedImagePath] = useState<string | null>(null)
+  // Store the last request params so we can retry
+  const [lastAnalyzeParams, setLastAnalyzeParams] = useState<{ imagePath: string; mealType: MealType } | null>(null)
 
   const handleUploaded = (path: string, imgId: string, _previewUrl: string) => {
     setUploadedImageId(imgId)
@@ -31,25 +33,42 @@ export default function AIRecordPage() {
     setError(null)
   }
 
-  const handleAnalyze = async () => {
-    if (!uploadedImageId || !uploadedImagePath) return
+  const doAnalyze = useCallback(async (imagePath: string, mealType: MealType) => {
     setAnalyzing(true)
     setError(null)
     try {
-      const response = await recognizeFood({
-        imagePath: uploadedImagePath,
-        mealType: selectedMealType,
-      })
+      const response = await recognizeFood({ imagePath, mealType })
       if (response.success) {
-        setResult(response.data.foods, imagePath || '', uploadedImageId, selectedMealType)
+        setResult(response.data.foods, imagePath, uploadedImageId || '', mealType)
       } else {
-        setError(response.error.message)
+        setError('未能识别到食物，请尝试更清晰的图片或调整光线')
       }
     } catch (err) {
-      setError(getUserMessage(err))
+      const msg = getUserMessage(err)
+      setError(msg)
+      // Save params so user can retry
+      if (isRetryable(err)) {
+        setLastAnalyzeParams({ imagePath, mealType })
+      }
     } finally {
       setAnalyzing(false)
     }
+  }, [setResult, uploadedImageId])
+
+  const handleAnalyze = async () => {
+    if (!uploadedImageId || !uploadedImagePath) return
+    setLastAnalyzeParams({ imagePath: uploadedImagePath, mealType: selectedMealType })
+    await doAnalyze(uploadedImagePath, selectedMealType)
+  }
+
+  const handleRetry = () => {
+    if (lastAnalyzeParams) {
+      doAnalyze(lastAnalyzeParams.imagePath, lastAnalyzeParams.mealType)
+    }
+  }
+
+  const handleGoManual = () => {
+    navigate('/records/new')
   }
 
   const handleSave = async () => {
@@ -61,7 +80,7 @@ export default function AIRecordPage() {
         result.map(f => ({
           name: f.name,
           weight_g: f.estimated_weight_g,
-          calories: f.calories,
+          calories: Math.round(f.calories),
           protein_g: f.protein_g,
           fat_g: f.fat_g,
           carbs_g: f.carbs_g,
@@ -100,7 +119,7 @@ export default function AIRecordPage() {
             </select>
           </div>
           <ImageUploader onUploaded={handleUploaded} />
-          {uploadedImageId && !analyzing && (
+          {uploadedImageId && !analyzing && !error && (
             <Button className="w-full" size="lg" onClick={handleAnalyze}>
               🔍 开始识别
             </Button>
@@ -109,12 +128,21 @@ export default function AIRecordPage() {
             <div className="flex flex-col items-center gap-3 py-8">
               <Spinner size="lg" />
               <p className="text-sm text-gray-500">AI 正在分析食物...</p>
+              <p className="text-xs text-gray-400">首次识别可能需要等待约30秒（服务冷启动）</p>
             </div>
           )}
         </>
       )}
 
-      {error && <ErrorMessage message={error} />}
+      {error && !result && (
+        <ErrorMessage
+          message={error}
+          onRetry={lastAnalyzeParams ? handleRetry : undefined}
+          secondaryLabel="切换手动录入"
+          onSecondary={handleGoManual}
+          hint={lastAnalyzeParams ? '可点击重试，或切换手动录入' : undefined}
+        />
+      )}
 
       {result && !editing && (
         <AIResultPreview foods={result} onEdit={() => setEditing(true)} onSave={handleSave} saving={saving} />

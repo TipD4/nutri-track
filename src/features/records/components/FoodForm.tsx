@@ -255,6 +255,7 @@ export function FoodForm({ onSubmit, isSubmitting, defaultValues, isEditing }: F
                   {...register(`foods.${index}.weight_g`, { valueAsNumber: true })}
                   label="重量 (g)"
                   type="number"
+                  step="any"
                   placeholder="150"
                   error={errors.foods?.[index]?.weight_g?.message}
                 />
@@ -262,6 +263,7 @@ export function FoodForm({ onSubmit, isSubmitting, defaultValues, isEditing }: F
                   {...register(`foods.${index}.calories`, { valueAsNumber: true })}
                   label="热量 (kcal)"
                   type="number"
+                  step="any"
                   placeholder="200"
                   error={errors.foods?.[index]?.calories?.message}
                 />
@@ -271,6 +273,7 @@ export function FoodForm({ onSubmit, isSubmitting, defaultValues, isEditing }: F
                   {...register(`foods.${index}.protein_g`, { valueAsNumber: true })}
                   label="蛋白质 (g)"
                   type="number"
+                  step="any"
                   placeholder="30"
                   error={errors.foods?.[index]?.protein_g?.message}
                 />
@@ -278,6 +281,7 @@ export function FoodForm({ onSubmit, isSubmitting, defaultValues, isEditing }: F
                   {...register(`foods.${index}.fat_g`, { valueAsNumber: true })}
                   label="脂肪 (g)"
                   type="number"
+                  step="any"
                   placeholder="10"
                   error={errors.foods?.[index]?.fat_g?.message}
                 />
@@ -285,6 +289,7 @@ export function FoodForm({ onSubmit, isSubmitting, defaultValues, isEditing }: F
                   {...register(`foods.${index}.carbs_g`, { valueAsNumber: true })}
                   label="碳水 (g)"
                   type="number"
+                  step="any"
                   placeholder="20"
                   error={errors.foods?.[index]?.carbs_g?.message}
                 />
