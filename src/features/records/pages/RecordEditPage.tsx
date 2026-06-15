@@ -62,7 +62,7 @@ export default function RecordEditPage() {
         <Button variant="danger" size="sm" onClick={() => setShowDelete(true)}>删除</Button>
       </div>
       {saveError && <ErrorMessage message={saveError} />}
-      <FoodForm onSubmit={handleSubmit} isSubmitting={updateRecord.isPending} defaultValues={defaultValues} />
+      <FoodForm onSubmit={handleSubmit} isSubmitting={updateRecord.isPending} defaultValues={defaultValues} isEditing />
 
       <ConfirmDialog
         open={showDelete}

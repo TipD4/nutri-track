@@ -74,7 +74,8 @@ export interface AIFoodResult {
 }
 
 export interface AIProxyRequest {
-  imagePath: string
+  imagePath?: string
+  text?: string
   mealType?: MealType
 }
 

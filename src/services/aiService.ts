@@ -24,3 +24,17 @@ export async function recognizeFood(request: AIProxyRequest): Promise<AIProxyRes
 
   return response.json()
 }
+
+/**
+ * Analyze food from natural language text description.
+ * Sends the text to the same proxy-ai edge function (text-only mode).
+ */
+export async function recognizeFoodByText(params: {
+  text: string
+  mealType: string
+}): Promise<AIProxyResponse> {
+  return recognizeFood({
+    text: params.text,
+    mealType: params.mealType as AIProxyRequest['mealType'],
+  })
+}
